@@ -1,25 +1,56 @@
 import React from 'react';
-import logo from './logo.svg';
+import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import './App.css';
+import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
+import themeFile from './util/theme';
+import jwtDecode from 'jwt-decode';
+
+// Redux bits
+import { Provider } from 'react-redux';
+import store from './redux/store';
+import { SET_AUTHENTICATED } from './redux/types';
+import { logoutUser, getUserData } from './redux/actions/userActions';
+// Components
+import Navbar from './components/Navbar';
+import AuthRoute from './util/AuthRoute';
+// Pages
+import home from './pages/home';
+import login from './pages/login';
+import signup from './pages/signup';
+import Axios from 'axios';
+
+const theme = createMuiTheme(themeFile);
+
+const token = localStorage.FBIdToken;
+if(token) {
+  const decodedToken = jwtDecode(token);
+  // if expired redirect user
+  if(decodedToken.exp * 1000 < Date.now()) {
+    store.dispatch(logoutUser())
+  } else {
+    store.dispatch({ type: SET_AUTHENTICATED });
+    Axios.defaults.headers.common['Authorization'] = token;
+    store.dispatch(getUserData());
+  }
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <MuiThemeProvider theme={theme}>
+    <Provider store={store}>
+      <Router>
+        <Navbar />
+        <div className="container">
+          <Switch>
+            <Route exact path="/" component={home}/>
+            <AuthRoute exact path="/login" component={login} />
+            <AuthRoute exact path="/signup" component={signup} />
+          </Switch>
+        </div>
+      </Router>
+    </Provider>
+    </MuiThemeProvider>
   );
 }
 
